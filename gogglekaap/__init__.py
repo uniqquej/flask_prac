@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g
 from flask import render_template
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
@@ -34,50 +34,20 @@ def create_app():
     app.register_blueprint(auth_route.bp)
 
 
-
+    '''Request Hook'''
+    @app.before_request 
+    def before_request():
+        g.db = db.session # 매 요청 전에 db를 물려주는 역할
+    
+    @app.teardown_request
+    def teardown_request(exception):
+        if hasattr(g, 'db'):
+            g.db.close() # 모든 요청 후 db를 닫아주는 역할
+    
+    
+    
     @app.errorhandler(404)
     def page_404(error):
         return render_template('/404.html')
-    
-    # '''routing practice'''
-    # from flask import jsonify, redirect, url_for
-    # from markupsafe import escape
-    
-    # @app.route('/test/name/<name>')
-    # def name(name):
-    #     return f'name is {name},{escape(type(name))}'    
-    
-    # @app.route('/test/id/<int:id>')
-    # def id(id):
-    #     return 'id : %d' %id
-    
-    # @app.route('/test/path/<path:subpath>')
-    # def path(subpath):
-    #     return subpath
-    
-    # @app.route('/test/json')
-    # def json():
-    #     return jsonify({'name':'hi'})
-    
-    # @app.route('/test/urlfor/<path:subpath>')
-    # def urlfor(subpath):
-    #     return redirect(url_for('path',subpath=subpath))
-    
-    # '''method request'''
-    # from flask import request
-    
-    # def on_json_loading_failed_return_dict(e):
-    #     return {}
-    
-    # @app.route('/test/method/<id>', methods = ['POST', 'GET'])
-    
-    # def method_test(id):
-    #     request.on_json_loading_failed = on_json_loading_failed_return_dict
-    #     return jsonify({
-    #         "requset.arg" : request.args,
-    #         "request.form" : request.form,
-    #         "request.json" : request.json,
-    #         "request.method" : request.method 
-    #     })
     
     return app
