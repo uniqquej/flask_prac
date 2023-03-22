@@ -3,25 +3,26 @@ from flask import render_template
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-    
+
 csrf = CSRFProtect()
 db = SQLAlchemy()
 migrate = Migrate()
 
 
-def create_app():
+def create_app(config=None):
     app = Flask(__name__)
     csrf.init_app(app)
     
-    app.config['SECRET_KEY'] = 'secretkey' #session 암호화ㅏ
-    app.config['SESSION_COOKIE_NAME'] = 'gogglekaap'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@localhost:3307/gogglekaap?charset=utf8'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
-        
-    if app.config['DEBUG']:
-        app.config['SEND_FILE_MAX_AGE_DEFAULT '] = 1
-        app.config['WTF_CSRF_ENABLED'] = False #개발환경에서는 csrf error 무시
+    '''flask configs'''
+    from .configs import ProductionConfig, DevelopmentConfig
+    
+    if not config:
+        if app.config['DEBUG']:
+            config = DevelopmentConfig()
+        else:
+            config = ProductionConfig()
+    
+    app.config.from_object(config)
     
     '''db init'''
     db.init_app(app)
