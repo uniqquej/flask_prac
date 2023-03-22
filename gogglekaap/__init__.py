@@ -21,6 +21,7 @@ def create_app():
         
     if app.config['DEBUG']:
         app.config['SEND_FILE_MAX_AGE_DEFAULT '] = 1
+        app.config['WTF_CSRF_ENABLED'] = False #개발환경에서는 csrf error 무시
     
     '''db init'''
     db.init_app(app)
