@@ -1,3 +1,6 @@
+import os
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
 class Config:
     '''flask config'''
     SECRET_KEY = 'secretkey' #session 암호화ㅏ
@@ -11,6 +14,11 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SEND_FILE_MAX_AGE_DEFAULT = 1
     WTF_CSRF_ENABLED= False #개발환경에서는 csrf error 무시
+
+class TestingConfig(DevelopmentConfig):
+    __test__ = False
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_PATH, "sqlite_test.db")}'
     
 class ProductionConfig(DevelopmentConfig):
     pass

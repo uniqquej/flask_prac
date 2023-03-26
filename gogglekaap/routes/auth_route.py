@@ -79,7 +79,7 @@ def register():
  
 @bp.route('/logout')
 def logout():
-    session.pop('user_id')
+    session.pop('user_id', None)
     return redirect(url_for(f'{NAME}.login'))
 
 def flash_form_errors(form):
