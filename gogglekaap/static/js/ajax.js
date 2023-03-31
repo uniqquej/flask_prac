@@ -214,6 +214,25 @@ const MEMO = (function(){
       // 3) 컨테이너에 추가: prepend to grid
       // 4) 에러 얼럿 노출: error e.responseText
       // 5) 모달 리셋: done - resetModalFields(true)
+      $.ajax({
+        url: '/api/memos',
+        type: 'post',
+        data: data,
+        enctype: 'multipart/form-data',
+        contentType: false,
+        processData: false,
+        success: function(r){
+          let itemHtml = _makeMemoHtml(r);
+          $items = $(itemHtml);
+          $GRID.prepend($items).masonry('prepended', $items);
+        },
+        error: function(e){
+          alert(e.responseText);
+        },
+        complete: function(){
+          resetModalFields(true) //메모 생성 후 모달 초기화
+        }
+      })
     }
   };
 
@@ -235,6 +254,39 @@ const MEMO = (function(){
       // 5) 에러시 추가데이터 없을경우 인포 아이템 추가: append no more item
       // 6) 완료시, 로딩아이콘 토글링: complete - toggle loading icon with setTimeout
       // 5) 그리드 리셋: done - _resetGridLayout()
+    $.ajax({
+      url: '/api/memos',
+      type: 'get',
+      data: data,
+      beforeSend: function(){
+        $customActions.addClass('inactivate')
+      },
+      success: function(r){
+        let itemHtmls = '';
+        $.each(r,function(_, el){
+          itemHtmls += _makeMemoHtml(el);
+        });
+        itemHtmls += _makeMoreItemHtml();
+        const $items = $(itemHtmls);
+        $GRID.append($items).masonry('appended', $items);
+      },
+      error: function(e){
+        STATUS = false;
+        if (e.status ==404){
+          let html = _makeNoMoreItemHtml();
+          let $html = $(html);
+          $GRID.append($html).masonry('append', $html);
+        } else {
+          alert(e.responseText)
+        }
+      },
+      complete: function(){
+        _resetGridLayout();
+        setTimeout(function(){
+          $customActions.removeClass('inactive');
+        },1000)
+      }
+    })
     }
   };
 
@@ -248,6 +300,24 @@ const MEMO = (function(){
     // TODO
     // 1) 모달 필드를 리셋해준다: beforeSend - resetModalFields
     // 2) 조회한 데이터로 모달 필드를 반영하고, 텍스트 에리어를 트리거링 한다
+  
+    $.ajax({
+      url: '/api/memos/' + id,
+      type: 'get',
+      beforeSend: function(){
+        resetModalFields();
+      },
+      success: function(r){
+        $modalTitle.val(r.title);
+        $modalContent.val(r.content);
+        $modalClose.attr('data-id', r.id);
+        if (r.linked_image) {
+          const imgHtml = '<img src="' + r.linked_image + '" alt=""/>';
+          $modalMedia.html(imgHtml);
+        }
+        $modalContent.trigger('keyup');
+      }
+    });
   };
 
   /* 메모 삭제 */
@@ -284,6 +354,24 @@ const MEMO = (function(){
       // 3) 리턴값 메모 아이템에 반영
       // 4) 에러 노출
       // 5) 완료시 모달리셋: done - resetModalFields(true)
+      $.ajax({
+        url:'/api/memos/' + id,
+        type: 'put',
+        data: data,
+         nctype: 'multipart/form-data',
+        contentType: false,
+        processData: false,
+        success: function(r){
+          $title.html(r.title);
+          $content.html(r.content);
+        },
+        error: function(e){
+          alert(e.responseText);
+        },
+        complete: function(){
+          resetModalFields(true);
+        }
+      })
     }
   };
 
