@@ -6,7 +6,8 @@ from gogglekaap import create_app, db
 from gogglekaap.models.users import User as UserModel
 from gogglekaap.models.memo import Memo as MemoModel
 import pytest
-import os
+import os, shutil
+
 
 @pytest.fixture(scope='session')
 def user_data():
@@ -37,6 +38,12 @@ def app(user_data, memo_data):
         db.session.commit()        
         yield app
         #불필요 db 정리
+        path = os.path.join(
+            app.static_folder,
+            app.config['USER_STATIC_BASE_DIR'],
+            user_data['user_id']
+        )
+        shutil.rmtree(path, True)
         db.drop_all()
         db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace(
             'sqlite:///',
