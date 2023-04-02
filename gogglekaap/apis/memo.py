@@ -5,6 +5,7 @@ from flask import g, current_app
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 import os
+import shutil
 
 ns = Namespace(
     'memos',
@@ -152,6 +153,20 @@ class OneMemo(Resource):
         if args['content'] is not None:
             memo.content = args['content']
         
+        file = args['linked_image']
+        if file:
+            relative_path, upload_path = save_file(file)
+            if memo.linked_image:
+                origin_path = os.path.join(
+                    current_app.root_path,
+                    memo.linked_image
+                )
+                
+                if origin_path != upload_path:
+                    if os.path.isfile(origin_path):
+                        shutil.rmtree(os.path.dirname(origin_path))
+            memo.linked_image = relative_path
+                 
         g.db.commit()
         return memo
     
@@ -162,4 +177,23 @@ class OneMemo(Resource):
         
         g.db.delete(memo)
         g.db.commit()
+        return '', 204
+
+@ns.param('id','메모 고유 아이디')
+@ns.route('/<int:id>/image')
+class MemoImage(Resource):
+    def delete(self,id):
+        '''메모 이미지 삭제'''
+        memo = Memo.query.get_or_404(id)
+        if g.user.id != memo.user_id:
+            ns.abort(403)
+        if memo.linked_image:
+            origin_path = os.path.join(
+                current_app.root_path,
+                memo.linked_image
+            )
+            if os.path.isfile(origin_path):
+                shutil.rmtree(os.path.dirname(origin_path))
+            memo.linked_image = None
+            g.db.commit()
         return '', 204
