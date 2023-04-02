@@ -340,4 +340,6 @@ $RECYCLE.BIN/
 #sqlite
 *.db
 
+#업로드이미지 폴더
+static/user_imges
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,visualstudiocode,flask,python

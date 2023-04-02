@@ -1,7 +1,10 @@
 from gogglekaap.models.memo import Memo
 from gogglekaap.models.users import User
 from flask_restx import Namespace, reqparse, fields, Resource
-from flask import g
+from flask import g, current_app
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
+import os
 
 ns = Namespace(
     'memos',
@@ -13,6 +16,7 @@ memo = ns.model('Memo',{
     'user_id' : fields.Integer(required = True, decription='유저 고유 아이디'),
     'title' : fields.String(required = True, description = '메모 제목'),
     'content' : fields.String(required = True, description ='메모 내용'),
+    'linked_image' : fields.String(required = False, description ='메모 이미지'),
     'created_at' : fields.DateTime(description ='작성 일자'),
     'updated_at' : fields.DateTime(description ='수정 일자')
 })
@@ -20,6 +24,7 @@ memo = ns.model('Memo',{
 post_parser = reqparse.RequestParser()
 post_parser.add_argument('title', required = True, help = '메모 제목')
 post_parser.add_argument('content', required = True, help = '메모 내용')
+post_parser.add_argument('linked_image', location='files', required = False, type = FileStorage, help = '메모 이미지')
 
 put_parser = post_parser.copy()
 put_parser.replace_argument('title', required=False, help = ' 제목 수정')
@@ -28,6 +33,47 @@ put_parser.replace_argument('content', required=False, help='수정 내용')
 get_parser = reqparse.RequestParser()
 get_parser.add_argument('page', required=False, type=int, help='메모 페이지 번호')
 get_parser.add_argument('needle', required=False, help='메모 검색')
+
+def allowed_file(filename):
+    return '.' in filename and \
+        filename.rsplit('.',1)[1].lower() in {
+            'jpg',
+            'jpeg',
+            'png',
+            'gif'
+        }
+
+def randomword(length): #filename hashing
+    import random, string
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
+
+def save_file(file):
+    if file.filename == '':
+        ns.abort(400)
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        relative_path = os.path.join(
+            current_app.static_url_path[1:], #/static > static
+            current_app.config['USER_STATIC_BASE_DIR'],
+            g.user.user_id, #static/user_images/{user_id}
+            'memos', #static/user_images/{user_id}/memos
+            randomword(5), #static/user_images/{user_id}/memos/adfad
+            filename #static/user_images/{user_id}/memos/adfad/{filename}
+        )
+        upload_path = os.path.join(
+            current_app.root_path,
+            relative_path
+        )
+        os.makedirs(
+            os.path.dirname(upload_path),
+            exist_ok=True
+        )
+        file.save(upload_path)
+        return relative_path, upload_path
+    else:
+        ns.abort(400)
 
 @ns.route('')
 class MemoList(Resource):
@@ -71,6 +117,10 @@ class MemoList(Resource):
             content = args['content'],
             user_id = g.user.id
         )
+        file = args['linked_image']
+        if file:
+            relative_path, _ = save_file(file)
+            memo.linked_image = relative_path
         g.db.add(memo)
         g.db.commit()
         return memo, 201        
