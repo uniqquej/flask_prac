@@ -3,7 +3,7 @@ BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class Config:
     '''flask config'''
-    SECRET_KEY = 'secretkey' #session 암호화ㅏ
+    SECRET_KEY = 'secretkey' #session 암호화
     SESSION_COOKIE_NAME = 'gogglekaap'
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:password@localhost:3307/gogglekaap?charset=utf8'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
