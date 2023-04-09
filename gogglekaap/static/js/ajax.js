@@ -581,6 +581,24 @@ const MEMO = (function(){
     // 4) 메모 아이템에 라벨 칩 추가
     // 5) 에러시 얼럿 노출
     // 6) 완료 시 그리드 리셋: _resetGridLayout()
+    $.ajax({
+      url: '/api/memos/' + id,
+      type: 'put',
+      data : {
+        labels: labels.join(',')
+      },
+      success : function(r){
+        let html = '';
+        html += _makeLabelChipHtml(r);
+        $item.find('.item-chip').html(html);
+      },
+      error: function(e){
+        alert(e.responseText);
+      },
+      complet: function(){
+        _resetGridLayout();
+      }
+    })
   }
 
   /* 메모 검색 조회 */

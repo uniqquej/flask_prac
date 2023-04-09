@@ -1,5 +1,6 @@
 from gogglekaap.models.memo import Memo
 from gogglekaap.models.users import User
+from gogglekaap.models.label import Label as LabelModel
 from flask_restx import Namespace, reqparse, fields, Resource, inputs
 from flask import g, current_app
 from werkzeug.datastructures import FileStorage
@@ -12,6 +13,11 @@ ns = Namespace(
     description='메모 관련 API'
 )
 
+label = ns.model('Label',{
+    'id' : fields.Integer(required=True, description='라벨 고유 번호'),
+    'content': fields.String(required=True, description='라벨 내용')
+})
+
 memo = ns.model('Memo',{
     'id' : fields.Integer(required = True, decription='메모 고유 번호'),
     'user_id' : fields.Integer(required = True, decription='유저 고유 아이디'),
@@ -19,6 +25,7 @@ memo = ns.model('Memo',{
     'content' : fields.String(required = True, description ='메모 내용'),
     'linked_image' : fields.String(required = False, description ='메모 이미지'),
     'is_deleted' : fields.Boolean(required=False, description='메모 삭제 여부'),
+    'labels' : fields.List(fields.Nested(label), description ='연결된 라벨'),
     'created_at' : fields.DateTime(description ='작성 일자'),
     'updated_at' : fields.DateTime(description ='수정 일자')
 })
@@ -28,6 +35,8 @@ post_parser.add_argument('title', required = True, help = '메모 제목')
 post_parser.add_argument('content', required = True, help = '메모 내용')
 post_parser.add_argument('linked_image', location='files', required = False, type = FileStorage, help = '메모 이미지')
 post_parser.add_argument('is_deleted', required=False, type=inputs.boolean, help='메모 삭제 여부')
+post_parser.add_argument('labels', action='split', help = '라벨 번호 콤마 스트링') #리스트로 된 라벨스를 라벨로 잘라주는 역할 (split)
+
 
 put_parser = post_parser.copy()
 put_parser.replace_argument('title', required=False, help = ' 제목 수정')
@@ -37,6 +46,7 @@ get_parser = reqparse.RequestParser()
 get_parser.add_argument('page', required=False, type=int, help='메모 페이지 번호')
 get_parser.add_argument('needle', required=False, help='메모 검색')
 get_parser.add_argument('is_deleted', required=False, type=inputs.boolean, help='메모 삭제 여부')
+get_parser.add_argument('label', help='라벨번호')
 
 
 def allowed_file(filename):
@@ -90,6 +100,7 @@ class MemoList(Resource):
         args = get_parser.parse_args()
         page = args['page']
         needle = args['needle']
+        label = args['label']
         per_page = 5
         is_deleted = args['is_deleted']
         if is_deleted is None:
@@ -107,6 +118,11 @@ class MemoList(Resource):
             needle=f'%{needle}%'
             base_query = Memo.query.filter(
                 Memo.title.ilike(needle)|Memo.content.ilike(needle)
+            )
+        
+        if label:
+            base_query = base_query.filter(
+                Memo.labels.any(LabelModel.id == label)
             )
             
         pages = base_query.order_by(
@@ -135,6 +151,22 @@ class MemoList(Resource):
         if file:
             relative_path, _ = save_file(file)
             memo.linked_image = relative_path
+            
+        labels = args['labels']
+        if labels:
+            for cnt in labels:
+                label = LabelModel.query.filter(
+                    LabelModel.content == cnt,
+                    LabelModel.user_id == g.user.id
+                ).first()
+                
+                if not label:
+                    label = LabelModel(
+                        content = cnt,
+                        user_id = g.user.id
+                    )
+                memo.labels.append(label)
+        
         g.db.add(memo)
         g.db.commit()
         return memo, 201        
@@ -166,6 +198,23 @@ class OneMemo(Resource):
         if args['content'] is not None:
             memo.content = args['content']
         
+        if args['labels']:
+            memo.labels.clear()
+            for cnt in args['labels']:
+                if cnt:
+                    label = LabelModel.query.filter(
+                        LabelModel.content == cnt,
+                        LabelModel.user_id == g.user.id    
+                    ).first()
+                    
+                    if not label:
+                        label = LabelModel(
+                            content = cnt,
+                            user_id = g.user.id
+                        )
+                    
+                    memo.labels.append(label)
+            
         if args['is_deleted'] is not None:
             memo.is_deleted = args['is_deleted']
     
