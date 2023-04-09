@@ -23,8 +23,15 @@ post_parser.add_argument('content', required=True, help='라벨 내용')
 class LabelList(Resource):
     @ns.marshal_list_with(label, skip_none=True)
     def get(self):
-        data = LabelModel.query.all()
-        return data
+        '''라벨 복수 조회'''
+        query = LabelModel.query.join(
+            UserModel,
+            UserModel.id == LabelModel.user_id
+        ).filter(
+            UserModel.id == g.user.id
+        )
+        
+        return query.all()
     
     @ns.marshal_list_with(label, skip_none=True)
     @ns.expect(post_parser)
@@ -53,3 +60,17 @@ class LabelList(Resource):
         g.db.commit()
         return label, 201
 
+@ns.param('id','라벨 번호')
+@ns.route('/<int:id>')
+class Label(Resource):
+    def delete(self,id):
+        label = LabelModel.query.get_or_404(id)
+        if label.user_id != g.user.id:
+            ns.abort(403)
+        
+        g.db.delete(label)
+        g.db.commit()
+        return '', 204
+        
+        
+            
