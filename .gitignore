@@ -339,7 +339,7 @@ $RECYCLE.BIN/
 
 #sqlite
 *.db
-
+.env
 #업로드이미지 폴더
 gogglekaap/static/user_imges
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,visualstudiocode,flask,python
